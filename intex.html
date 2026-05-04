@@ -1,0 +1,1359 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>⚡ 寶可夢進化與對戰系統 (雲端同步版)</title>
+    <style>
+        :root {
+            --primary-color: #E3350D; 
+            --secondary-color: #F6F8FA; 
+            --accent-color: #FFCB05; 
+            --success-color: #4DAD5B; 
+            --danger-color: #D32F2F; 
+            --text-color: #212121; 
+            --light-text: #757575; 
+            --bg-color: #E8F5E9; 
+            --card-bg: #FFFFFF; 
+            --border-color: #E0E0E0; 
+            --poke-blue: #30A7D7;
+            --arena-bg: #1A1A24;
+        }
+
+        /* 全局字體設定：強制使用微軟正黑體 */
+        body {
+            font-family: "微軟正黑體", "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 20px 20px 80px 20px;
+            background-image: radial-gradient(#C8E6C9 15%, transparent 16%), radial-gradient(#C8E6C9 15%, transparent 16%);
+            background-size: 60px 60px;
+            background-position: 0 0, 30px 30px;
+        }
+
+        /* 確保輸入框與按鈕也繼承微軟正黑體 */
+        input, select, button {
+            font-family: inherit;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 35px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            border: 5px solid var(--primary-color);
+            position: relative;
+        }
+
+        .cloud-badge {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #E1F5FE;
+            color: #0288D1;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9em;
+            border: 2px solid #03A9F4;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-section {
+            text-align: center;
+            margin-bottom: 35px;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            font-size: 2.8em;
+            margin: 0;
+            font-weight: 900;
+            text-shadow: 2px 2px var(--accent-color);
+            letter-spacing: 2px;
+            -webkit-text-stroke: 1px #FFF;
+        }
+        
+        .subtitle {
+            color: var(--text-color);
+            font-weight: bold;
+            margin-top: 10px;
+            font-size: 1.1em;
+            background: var(--accent-color);
+            display: inline-block;
+            padding: 5px 20px;
+            border-radius: 20px;
+            border: 2px solid #333;
+        }
+
+        .control-panel {
+            background-color: var(--secondary-color);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            border: 3px dashed var(--poke-blue);
+        }
+
+        .control-panel h3 { margin: 0 10px 0 0; color: var(--poke-blue); width: 100%; text-align: center; margin-bottom: 10px;}
+
+        /* 新增過濾面板樣式 */
+        .filter-panel {
+            background-color: #FFFDE7;
+            padding: 15px 20px;
+            border-radius: 15px;
+            margin-bottom: 40px;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            border: 2px solid #FFF59D;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+
+        .filter-panel label {
+            font-weight: bold;
+            color: #F57F17;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .filter-panel select {
+            border-color: #FFF59D;
+            background-color: white;
+            flex-grow: 1;
+            max-width: 300px;
+        }
+        
+        .filter-panel select:focus {
+            border-color: #FBC02D;
+            box-shadow: 0 0 0 2px rgba(251, 192, 45, 0.2);
+        }
+
+        input, select {
+            padding: 10px 15px;
+            border-radius: 12px;
+            border: 2px solid var(--border-color);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus { border-color: var(--poke-blue); }
+
+        button {
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 12px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.15);
+        }
+        button:active { transform: translateY(4px); box-shadow: none; }
+        button.add-btn { background-color: var(--poke-blue); border: 2px solid #2284AA; }
+        button.add-btn:hover { background-color: #258FB8; }
+        
+        button.reset-btn { 
+            background-color: transparent; 
+            color: var(--light-text);
+            border: 2px solid var(--border-color);
+            margin-left: auto;
+            box-shadow: none;
+        }
+        button.reset-btn:hover { color: var(--danger-color); border-color: var(--danger-color); }
+
+        /* 卡片網格 */
+        .student-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 85px 25px; 
+            padding-top: 60px;
+        }
+
+        .student-card {
+            background-color: var(--card-bg);
+            border-radius: 20px;
+            padding: 65px 20px 25px 20px; 
+            text-align: center;
+            position: relative;
+            box-shadow: 0 8px 15px rgba(0,0,0,0.08);
+            border: 3px solid var(--border-color);
+            transition: transform 0.3s ease, border-color 0.3s;
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .student-card:hover {
+            transform: translateY(-8px);
+            border-color: var(--accent-color);
+        }
+
+        .pet-avatar {
+            position: absolute;
+            top: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #FFF;
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            border: 6px solid var(--border-color);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+            z-index: 10;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        .poke-img {
+            width: 85%;
+            height: 85%;
+            object-fit: contain;
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-6px); }
+        }
+
+        .poke-ball {
+            width: 70%;
+            height: 70%;
+            animation: shake 4s ease-in-out infinite;
+            transform-origin: bottom center;
+        }
+        @keyframes shake {
+            0%, 90% { transform: rotate(0deg); }
+            92% { transform: rotate(10deg); }
+            94% { transform: rotate(-10deg); }
+            96% { transform: rotate(10deg); }
+            98% { transform: rotate(-10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        
+        .pet-avatar.stage-0 { border-color: #DCDCC6; background-color: #F9F9F9;}
+        .pet-avatar.stage-1 { border-color: var(--success-color); background-color: #E8F5E9;}
+        .pet-avatar.stage-2 { border-color: var(--poke-blue); background-color: #E1F5FE;}
+        .pet-avatar.stage-3 { 
+            border-color: var(--accent-color); 
+            background-color: #FFFDE7;
+            animation: evolve-glow 1.5s infinite alternate; 
+        }
+
+        @keyframes evolve-glow {
+            from { box-shadow: 0 0 10px rgba(255, 203, 5, 0.5); }
+            to { box-shadow: 0 0 30px rgba(255, 203, 5, 1), 0 0 10px rgba(255, 100, 0, 0.8); }
+        }
+
+        .poke-name {
+            font-size: 1.25em;
+            color: var(--primary-color);
+            font-weight: 900;
+            margin-bottom: 10px;
+            background: #FFEBEE;
+            display: inline-block;
+            padding: 4px 15px;
+            border-radius: 15px;
+            border: 2px solid #FFCDD2;
+        }
+
+        .student-class {
+            font-size: 0.95em;
+            color: white;
+            background: #FF9800; /* 班級標籤改顏色區分 */
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            border: 1px solid #F57C00;
+        }
+        
+        .student-group {
+            font-size: 0.95em;
+            color: white;
+            background: var(--text-color);
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            margin-bottom: 5px;
+            font-weight: bold;
+            margin-left: 5px;
+        }
+
+        .student-name {
+            font-size: 1.5em;
+            font-weight: 900;
+            margin: 5px 0 10px 0;
+            color: var(--text-color);
+        }
+
+        .score-display {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin: 5px 0;
+        }
+
+        .progress-container {
+            margin: 10px 0 15px 0;
+            text-align: left;
+        }
+        .progress-text {
+            font-size: 0.85em;
+            color: var(--light-text);
+            margin-bottom: 5px;
+            display: flex;
+            justify-content: space-between;
+            font-weight: bold;
+        }
+        .progress-bar-bg {
+            width: 100%;
+            height: 14px;
+            background-color: #EEEEEE;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #E0E0E0;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #42A5F5, #1E88E5);
+            border-radius: 10px;
+            transition: width 0.5s ease-out, background 0.3s;
+        }
+        .progress-fill.stage-0 { background: linear-gradient(90deg, #AED581, #7CB342); }
+        .progress-fill.stage-1 { background: linear-gradient(90deg, #64B5F6, #1E88E5); }
+        .progress-fill.stage-2 { background: linear-gradient(90deg, #BA68C8, #8E24AA); }
+        .progress-fill.stage-3 { background: linear-gradient(90deg, #FFD54F, #FF8F00); width: 100%; }
+
+        .cp-display {
+            background: linear-gradient(135deg, #ECEFF1, #CFD8DC);
+            padding: 10px;
+            border-radius: 12px;
+            min-height: 35px;
+            margin-bottom: 10px;
+            font-size: 1.1em;
+            color: var(--light-text);
+            border: 2px dashed #B0BEC5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .cp-display.active {
+            background: linear-gradient(135deg, #1E1E1E, #333333);
+            color: #FFF;
+            border: 2px solid var(--accent-color);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .cp-value {
+            font-size: 1.6em;
+            color: var(--accent-color);
+            text-shadow: 0 0 5px rgba(255, 203, 5, 0.5);
+            margin-left: 8px;
+        }
+
+        .skills-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 15px;
+            min-height: 28px;
+            padding: 5px;
+            background: #FFF8E1;
+            border-radius: 10px;
+            border: 1px dashed #FFE082;
+        }
+
+        .skill-badge {
+            background: linear-gradient(135deg, #FF9800, #F57C00);
+            color: white;
+            padding: 4px 10px;
+            border-radius: 15px;
+            font-size: 0.85em;
+            font-weight: bold;
+            box-shadow: 0 2px 5px rgba(255, 152, 0, 0.4);
+            border: 1px solid #E65100;
+            animation: popIn 0.3s ease-out;
+            white-space: nowrap;
+        }
+
+        .score-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: auto; 
+            background: #f9f9f9;
+            padding: 10px;
+            border-radius: 15px;
+            border: 1px solid #EEEEEE;
+        }
+
+        .score-input {
+            width: 45px;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-weight: bold;
+            border: 2px solid #E0E0E0;
+            -moz-appearance: textfield; 
+        }
+        .score-input::-webkit-outer-spin-button,
+        .score-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .action-btn {
+            height: 40px;
+            border-radius: 10px;
+            padding: 0 12px;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .plus-btn { background-color: var(--success-color); border: 2px solid #388E3C; flex-grow: 1;}
+        .minus-btn { background-color: #E0E0E0; color: #424242; border: 2px solid #BDBDBD; width: 40px; box-shadow: none;}
+        
+        .del-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: transparent;
+            color: #BDBDBD;
+            box-shadow: none;
+            font-size: 16px;
+            width: auto;
+            height: auto;
+            padding: 5px;
+            border-radius: 50%;
+            z-index: 10;
+            cursor: pointer;
+        }
+        .del-btn:hover { color: var(--danger-color); background: #FFEBEE; transform: none;}
+
+        .empty-state {
+            text-align: center;
+            grid-column: 1 / -1;
+            padding: 60px;
+            color: var(--light-text);
+            font-size: 1.3em;
+            font-weight: bold;
+        }
+
+        .fab-battle {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: linear-gradient(135deg, #E3350D, #B71C1C);
+            color: white;
+            border: 4px solid var(--accent-color);
+            border-radius: 50px;
+            padding: 15px 30px;
+            font-size: 1.4em;
+            font-weight: 900;
+            cursor: pointer;
+            box-shadow: 0 10px 25px rgba(227, 53, 13, 0.4);
+            z-index: 100;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            animation: pulse-battle 2s infinite;
+        }
+        .fab-battle:hover {
+            transform: scale(1.1) translateY(-5px);
+        }
+        @keyframes pulse-battle {
+            0% { box-shadow: 0 0 0 0 rgba(227, 53, 13, 0.6); }
+            70% { box-shadow: 0 0 0 20px rgba(227, 53, 13, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(227, 53, 13, 0); }
+        }
+
+        /* 戰鬥場 Modal */
+        #arenaModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .arena-content {
+            background: var(--arena-bg);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 800px;
+            box-shadow: 0 10px 50px rgba(0,0,0,0.5);
+            border: 6px solid var(--primary-color);
+            position: relative;
+        }
+        .arena-title {
+            color: white;
+            font-size: 2.5em;
+            margin-top: 0;
+            text-shadow: 2px 2px var(--danger-color);
+            letter-spacing: 2px;
+        }
+        .arena-close {
+            position: absolute;
+            top: 15px; right: 20px;
+            background: transparent; color: white;
+            font-size: 2em; box-shadow: none; padding: 0; margin: 0;
+        }
+        
+        .battle-stage {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 30px 0;
+            background: #2D2D3A;
+            padding: 20px;
+            border-radius: 15px;
+            border: 2px dashed #555;
+        }
+        
+        .fighter {
+            width: 40%;
+            background: rgba(255,255,255,0.1);
+            padding: 20px;
+            border-radius: 15px;
+            color: white;
+        }
+        
+        .fighter select {
+            width: 100%;
+            margin-bottom: 15px;
+            background: #444;
+            color: white;
+            border: 2px solid var(--accent-color);
+            font-size: 1.1em;
+        }
+
+        .fighter-img-box {
+            height: 150px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, rgba(255,255,255,0) 70%);
+        }
+        .fighter-img-box img {
+            max-height: 100%; max-width: 100%;
+        }
+        
+        .vs-text {
+            font-size: 3em;
+            font-weight: 900;
+            color: var(--accent-color);
+            text-shadow: 0 0 15px var(--danger-color);
+            font-style: italic;
+        }
+
+        .battle-btn {
+            background: linear-gradient(135deg, #FF9800, #F44336);
+            color: white;
+            font-size: 1.8em;
+            padding: 15px 50px;
+            border-radius: 50px;
+            border: 4px solid white;
+            margin-top: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        .battle-btn:active { transform: scale(0.95); }
+        .battle-btn:disabled { background: #757575; border-color: #9E9E9E; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        #battleResult {
+            margin-top: 20px;
+            font-size: 1.5em;
+            color: var(--accent-color);
+            font-weight: bold;
+            min-height: 70px; 
+        }
+
+        /* 自訂確認與刪除的 Modal 彈出視窗 */
+        #customConfirmModal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 4000;
+            justify-content: center;
+            align-items: center;
+            backdrop-filter: blur(5px);
+        }
+        .confirm-box {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            text-align: center;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            border: 4px solid var(--danger-color);
+            animation: popIn 0.3s ease-out;
+        }
+        .confirm-box h3 { color: var(--danger-color); font-size: 1.6em; margin-top: 0; }
+        .confirm-box p { font-size: 1.1em; color: var(--text-color); margin-bottom: 25px; line-height: 1.5; font-weight: bold;}
+        .confirm-actions { display: flex; justify-content: center; gap: 15px; }
+        .confirm-actions button { padding: 10px 25px; font-size: 1.1em; border-radius: 12px;}
+        .btn-cancel-action { background: #E0E0E0; color: #424242; border: 2px solid #BDBDBD; box-shadow: none; }
+        .btn-cancel-action:hover { background: #D6D6D6; }
+        .btn-confirm-action { background: var(--danger-color); color: white; border: 2px solid #B71C1C; }
+        .btn-confirm-action:hover { background: #B71C1C; }
+
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        #toast {
+            position: fixed;
+            bottom: -80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(33, 33, 33, 0.95);
+            color: #FFCB05;
+            padding: 15px 30px;
+            border-radius: 30px;
+            z-index: 5000;
+            font-weight: 900;
+            font-size: 1.2em;
+            transition: bottom 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+            border: 2px solid #FFCB05;
+            text-align: center;
+        }
+        
+        /* 載入畫面 */
+        #loadingOverlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-color);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5em;
+            color: var(--primary-color);
+            font-weight: bold;
+        }
+        .spinner {
+            width: 50px; height: 50px;
+            border: 5px solid rgba(227, 53, 13, 0.3);
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div>連線至雲端系統中...</div>
+</div>
+
+<div class="container">
+    <div class="cloud-badge" id="cloudStatus">
+        ☁️ 雲端同步中
+    </div>
+
+    <div class="header-section">
+        <h1>✨ 寶可夢進化與對戰系統 ✨</h1>
+        <div class="subtitle">🔴 0分(精靈球) ➡️ 🐾 20分(一階) ➡️ 🌟 50分(二階) ➡️ 👑 100分(最終進化解鎖技能與對戰)</div>
+    </div>
+
+    <div class="control-panel">
+        <h3>🌱 領養精靈球</h3>
+        
+        <select id="newType">
+            <option value="random">🎲 隨機分配屬性</option>
+            <option value="0">🔥 小火龍系 (火)</option>
+            <option value="1">🍃 妙蛙種子系 (草)</option>
+            <option value="2">💧 傑尼龜系 (水)</option>
+            <option value="3">🦅 波波系 (飛行)</option>
+            <option value="4">🐉 迷你龍系 (龍)</option>
+            <option value="5">✨ 拉魯拉絲系 (妖精)</option>
+            <option value="6">👻 鬼斯系 (幽靈)</option>
+            <option value="7">💪 腕力系 (格鬥)</option>
+            <option value="8">🪨 小拳石系 (岩石)</option>
+            <option value="9">⚡ 皮卡丘系 (電)</option>
+        </select>
+
+        <input type="text" id="newClass" placeholder="班級 (如: 3A)" style="width: 100px;">
+        <input type="text" id="newGroup" placeholder="組別/座號" style="width: 100px;">
+        <input type="text" id="newName" placeholder="小主人姓名" style="width: 110px;">
+        <button class="add-btn" onclick="addStudent()">領養</button>
+        <button class="reset-btn" onclick="requestResetAll()">全部重置</button>
+    </div>
+
+    <!-- 班級篩選面板 -->
+    <div class="filter-panel">
+        <label for="classFilter">🔍 篩選顯示：</label>
+        <select id="classFilter" onchange="filterAndRenderStudents()">
+            <option value="all">🌐 顯示全部班級</option>
+            <!-- 動態產生班級選項 -->
+        </select>
+    </div>
+
+    <div id="studentGrid" class="student-grid">
+        <!-- 卡片會產生在這裡 -->
+    </div>
+</div>
+
+<button class="fab-battle" onclick="openArena()">⚔️ 進入戰鬥場</button>
+
+<div id="arenaModal">
+    <div class="arena-content">
+        <button class="arena-close" onclick="closeArena()">✕</button>
+        <h2 class="arena-title">🔥 寶可夢對戰競技場 🔥</h2>
+        
+        <div class="battle-stage">
+            <div class="fighter" id="fighter1Box">
+                <select id="fighter1" onchange="updateFighterImage(1)"></select>
+                <div class="fighter-img-box" id="fighter1Img"></div>
+                <div style="font-size:1.5em; color:var(--accent-color); font-weight:bold; margin-top:10px;" id="fighter1CP"></div>
+            </div>
+            
+            <div class="vs-text">VS</div>
+            
+            <div class="fighter" id="fighter2Box">
+                <select id="fighter2" onchange="updateFighterImage(2)"></select>
+                <div class="fighter-img-box" id="fighter2Img"></div>
+                <div style="font-size:1.5em; color:var(--accent-color); font-weight:bold; margin-top:10px;" id="fighter2CP"></div>
+            </div>
+        </div>
+
+        <div id="battleResult">準備就緒，請選擇出戰寶可夢！</div>
+        <button class="battle-btn" id="btnStartBattle" onclick="startBattle()">⚔️ 開始對戰！</button>
+    </div>
+</div>
+
+<!-- 自訂確認視窗 (取代原生的 confirm) -->
+<div id="customConfirmModal">
+    <div class="confirm-box">
+        <h3 id="confirmTitle">確認動作</h3>
+        <p id="confirmMessage">確定要執行這個動作嗎？</p>
+        <div class="confirm-actions">
+            <button class="btn-cancel-action" onclick="closeCustomConfirm()">取消</button>
+            <button class="btn-confirm-action" onclick="executeCustomConfirm()">確定執行</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- 載入 Firebase 模組 -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, collection, doc, setDoc, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // 取得環境變數配置
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    
+    let currentUser = null;
+    let unsubscribeSnapshot = null;
+    let students = []; // 記憶體中的寶可夢資料
+    let currentFilter = 'all'; // 記錄當前篩選的班級
+
+    // 精靈球 SVG 
+    const pokeballSvg = `
+    <svg viewBox="0 0 100 100" class="poke-ball">
+        <circle cx="50" cy="50" r="46" fill="#FFFFFF" stroke="#333333" stroke-width="8"/>
+        <path d="M 4 50 A 46 46 0 0 1 96 50 Z" fill="#E3350D" stroke="#333333" stroke-width="8"/>
+        <line x1="4" y1="50" x2="96" y2="50" stroke="#333333" stroke-width="8"/>
+        <circle cx="50" cy="50" r="14" fill="#FFFFFF" stroke="#333333" stroke-width="8"/>
+        <circle cx="50" cy="50" r="5" fill="#EEEEEE" stroke="#333333" stroke-width="2"/>
+    </svg>`;
+
+    function getPokeImage(id) {
+        return `<img src="https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png" class="poke-img" alt="pokemon" loading="lazy" />`;
+    }
+
+    const pokemonTrees = [
+        [4, "小火龍", 5, "火恐龍", 6, "噴火龍"],
+        [1, "妙蛙種子", 2, "妙蛙草", 3, "妙蛙花"],
+        [7, "傑尼龜", 8, "卡咪龜", 9, "水箭龜"],
+        [16, "波波", 17, "比比鳥", 18, "大比鳥"],
+        [147, "迷你龍", 148, "哈克龍", 149, "快龍"],
+        [280, "拉魯拉絲", 281, "奇魯莉安", 282, "沙奈朵"],
+        [92, "鬼斯", 93, "鬼斯通", 94, "耿鬼"],
+        [66, "腕力", 67, "豪力", 68, "怪力"],
+        [74, "小拳石", 75, "隆隆石", 76, "隆隆岩"],
+        [172, "皮丘", 25, "皮卡丘", 26, "雷丘"]
+    ];
+
+    const SKILL_MAP = {
+        0: ["🔥 火花", "🔥 噴射火焰", "🔥 大字爆炎", "🔥 閃焰衝鋒"],
+        1: ["🍃 藤鞭", "🍃 飛葉快刀", "🍃 陽光烈焰", "🍃 飛葉風暴"],
+        2: ["💧 水槍", "💧 水之波動", "💧 衝浪", "💧 水炮"],
+        3: ["🦅 烈暴風", "🦅 燕返", "🦅 勇鳥猛攻", "🦅 神鳥猛擊"],
+        4: ["🐉 龍捲風", "🐉 龍之怒", "🐉 逆鱗", "🐉 龍星群"],
+        5: ["✨ 魅惑之聲", "✨ 魔法閃耀", "✨ 月亮之力", "✨ 薄霧炸裂"],
+        6: ["👻 舌舔", "👻 奇異之光", "👻 暗影球", "👻 禍不單行"],
+        7: ["💪 空手劈", "💪 地獄翻滾", "💪 爆裂拳", "💪 近身戰"],
+        8: ["🪨 落石", "🪨 岩石爆擊", "🪨 尖石攻擊", "🪨 雙刃頭錘"],
+        9: ["⚡ 電擊", "⚡ 電光一閃", "⚡ 十萬伏特", "⚡ 打雷"]
+    };
+    
+    const THRESHOLD_1 = 20;   
+    const THRESHOLD_2 = 50;   
+    const THRESHOLD_3 = 100;  
+    
+    const BASE_CP = 1500;     
+    const CP_PER_FOOD = 35;  
+
+    let toastTimeout;
+    function showToast(msg) {
+        const toast = document.getElementById('toast');
+        toast.innerHTML = msg;
+        toast.style.bottom = '40px';
+        clearTimeout(toastTimeout);
+        toastTimeout = setTimeout(() => { toast.style.bottom = '-80px'; }, 3500);
+    }
+
+    // ===== 自訂確認彈窗邏輯 =====
+    let confirmActionCallback = null;
+
+    window.openCustomConfirm = function(title, message, callback) {
+        document.getElementById('confirmTitle').innerText = title;
+        document.getElementById('confirmMessage').innerText = message;
+        confirmActionCallback = callback;
+        document.getElementById('customConfirmModal').style.display = 'flex';
+    };
+
+    window.closeCustomConfirm = function() {
+        document.getElementById('customConfirmModal').style.display = 'none';
+        confirmActionCallback = null;
+    };
+
+    window.executeCustomConfirm = function() {
+        if (confirmActionCallback) {
+            confirmActionCallback();
+        }
+        window.closeCustomConfirm();
+    };
+    // ===========================
+
+    function getEvolutionStatus(student) {
+        const tree = pokemonTrees[student.treeIndex] || pokemonTrees[0];
+        const score = student.score;
+        
+        if (score < THRESHOLD_1) {
+            return {
+                stage: 0, progress: (score / THRESHOLD_1) * 100,
+                text: `距孵化需 ${THRESHOLD_1 - score} 食物`,
+                name: "精靈球", imageHtml: pokeballSvg, cpText: "🔒 最終進化解鎖戰鬥力", isMax: false
+            };
+        } else if (score < THRESHOLD_2) {
+            return {
+                stage: 1, progress: ((score - THRESHOLD_1) / (THRESHOLD_2 - THRESHOLD_1)) * 100,
+                text: `距二階需 ${THRESHOLD_2 - score} 食物`,
+                name: tree[1], imageHtml: getPokeImage(tree[0]), cpText: "🔒 最終進化解鎖戰鬥力", isMax: false
+            };
+        } else if (score < THRESHOLD_3) {
+            return {
+                stage: 2, progress: ((score - THRESHOLD_2) / (THRESHOLD_3 - THRESHOLD_2)) * 100,
+                text: `距最終進化需 ${THRESHOLD_3 - score} 食物`,
+                name: tree[3], imageHtml: getPokeImage(tree[2]), cpText: "⚡ 即將解鎖戰鬥力系統", isMax: false
+            };
+        } else {
+            let currentCP = Math.max(1000, BASE_CP + ((score - THRESHOLD_3) * CP_PER_FOOD) + (student.cpBonus || 0));
+            return {
+                stage: 3, progress: 100, text: `✨ 最終型態！`,
+                name: tree[5], imageHtml: getPokeImage(tree[4]), cpText: `⚔️ CP: <span class="cp-value">${currentCP}</span>`, isMax: true, actualCP: currentCP
+            };
+        }
+    }
+
+    // 更新班級下拉選單
+    function updateClassFilterOptions() {
+        const classFilter = document.getElementById('classFilter');
+        const currentValue = classFilter.value;
+        
+        // 收集所有不重複的班級名稱
+        const classes = new Set();
+        students.forEach(s => {
+            if(s.className && s.className.trim() !== "") {
+                classes.add(s.className.trim());
+            }
+        });
+
+        // 排序班級名稱
+        const sortedClasses = Array.from(classes).sort();
+
+        // 重新建立選項
+        let optionsHTML = '<option value="all">🌐 顯示全部班級</option>';
+        sortedClasses.forEach(c => {
+            optionsHTML += `<option value="${c}">🏫 班級：${c}</option>`;
+        });
+        
+        classFilter.innerHTML = optionsHTML;
+
+        // 如果原本選擇的班級還存在，保持選取；否則回到'all'
+        if (classes.has(currentValue)) {
+            classFilter.value = currentValue;
+        } else {
+            classFilter.value = 'all';
+            currentFilter = 'all';
+        }
+    }
+
+    // 當下拉選單改變時觸發
+    window.filterAndRenderStudents = function() {
+        currentFilter = document.getElementById('classFilter').value;
+        renderStudents();
+    };
+
+    function renderStudents() {
+        const grid = document.getElementById('studentGrid');
+        grid.innerHTML = "";
+        
+        // 依照建立時間(ID)排序
+        let displayList = [...students].sort((a, b) => a.id.localeCompare(b.id));
+
+        // 套用班級過濾
+        if (currentFilter !== 'all') {
+            displayList = displayList.filter(s => s.className === currentFilter);
+        }
+
+        if (displayList.length === 0) {
+            if(students.length === 0) {
+                grid.innerHTML = `<div class="empty-state">${pokeballSvg}<div>博士的研究所目前空空如也...<br>趕快從上方選擇屬性並領養精靈球吧！</div></div>`;
+            } else {
+                grid.innerHTML = `<div class="empty-state">此班級目前還沒有寶可夢喔！<br>請確認班級名稱或新增一隻。</div>`;
+            }
+            return;
+        }
+
+        displayList.forEach(student => {
+            const status = getEvolutionStatus(student);
+            
+            let skillsHtml = '';
+            if (status.isMax) {
+                if (student.skills && student.skills.length > 0) {
+                    const badges = student.skills.map(skill => `<span class="skill-badge">${skill}</span>`).join('');
+                    skillsHtml = `<div class="skills-container">${badges}</div>`;
+                } else {
+                    skillsHtml = `<div class="skills-container"><span style="font-size:0.8em; color:#BDBDBD;">尚未學會任何絕招，快去對戰吧！</span></div>`;
+                }
+            }
+
+            // 處理舊資料沒有 groupName 的情況
+            const groupDisplay = student.groupName ? `<div class="student-group">${student.groupName}</div>` : '';
+
+            const card = document.createElement('div');
+            card.className = 'student-card';
+            card.innerHTML = `
+                <div class="pet-avatar stage-${status.stage}">${status.imageHtml}</div>
+                <button class="del-btn" onclick="requestDelete('${student.id}')" title="刪除">✕</button>
+                <div class="poke-name">${status.name}</div><br>
+                <div>
+                    <div class="student-class">${student.className || '未分類'}</div>
+                    ${groupDisplay}
+                </div>
+                <div class="student-name">${student.name}</div>
+                <div class="score-display">🍎 食物: ${student.score}</div>
+                <div class="progress-container">
+                    <div class="progress-text">
+                        <span>${status.stage === 0 ? '孵化進度' : (status.stage === 3 ? '系統狀態' : '進化進度')}</span>
+                        <span>${status.text}</span>
+                    </div>
+                    <div class="progress-bar-bg">
+                        <div class="progress-fill stage-${status.stage}" style="width: ${status.progress}%;"></div>
+                    </div>
+                </div>
+                <div class="cp-display ${status.isMax ? 'active' : ''}">
+                    ${status.cpText}
+                </div>
+                ${skillsHtml}
+                <div class="score-controls">
+                    <button class="action-btn minus-btn" onclick="updateScore('${student.id}', -1, true)" title="扣除分數">-</button>
+                    <input type="number" id="input-${student.id}" class="score-input" value="1" min="1">
+                    <button class="action-btn plus-btn" onclick="updateScore('${student.id}', 1, true)">餵食物 🍎</button>
+                </div>
+            `;
+            grid.appendChild(card);
+        });
+    }
+
+    // ====== 雲端資料庫操作 ======
+    
+    // 初始化認證與登入
+    const initAuth = async () => {
+        try {
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+        } catch (error) {
+            console.error("Auth error:", error);
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+    };
+
+    // 啟動 Firebase
+    initAuth();
+
+    // 監聽登入狀態並取得資料
+    onAuthStateChanged(auth, async (user) => {
+        currentUser = user;
+        if (user) {
+            document.getElementById('cloudStatus').innerHTML = "☁️ 已連線至雲端備份";
+            document.getElementById('cloudStatus').style.borderColor = "var(--success-color)";
+            document.getElementById('cloudStatus').style.color = "var(--success-color)";
+            
+            // 訂閱雲端資料庫
+            loadDataFromFirestore();
+            
+            // 隱藏載入畫面
+            setTimeout(() => { document.getElementById('loadingOverlay').style.display = 'none'; }, 500);
+        } else {
+            if (unsubscribeSnapshot) unsubscribeSnapshot();
+        }
+    });
+
+    // 監聽雲端資料變化
+    function loadDataFromFirestore() {
+        if (!currentUser) return;
+        const studentsRef = collection(db, 'artifacts', appId, 'users', currentUser.uid, 'students');
+
+        if (unsubscribeSnapshot) unsubscribeSnapshot();
+
+        unsubscribeSnapshot = onSnapshot(studentsRef, (snapshot) => {
+            students = [];
+            snapshot.forEach((doc) => {
+                students.push({ id: doc.id, ...doc.data() });
+            });
+            
+            // 更新班級過濾選項
+            updateClassFilterOptions();
+            // 渲染畫面
+            renderStudents();
+            
+            // 更新戰鬥場選項(若戰鬥場正開著)
+            if(document.getElementById('arenaModal').style.display === 'flex') {
+               updateArenaFightersUI();
+            }
+        }, (error) => {
+            console.error("Firestore error:", error);
+            showToast("⚠️ 雲端連線發生錯誤");
+        });
+    }
+
+    // 將各項操作功能掛載到 window，讓 HTML 的 onclick 可以呼叫
+    window.addStudent = async function() {
+        if (!currentUser) { showToast("連線中，請稍候..."); return; }
+        const nameInput = document.getElementById('newName');
+        const classInput = document.getElementById('newClass');
+        const groupInput = document.getElementById('newGroup');
+        const typeInput = document.getElementById('newType');
+        
+        const name = nameInput.value.trim();
+        const className = classInput.value.trim();
+        const groupName = groupInput.value.trim();
+        
+        if (name === "" || className === "") {
+            showToast("⚠️ 請輸入『班級』和『小主人姓名』喔！");
+            return;
+        }
+
+        let chosenTreeIndex = 0;
+        if (typeInput.value === "random") {
+            chosenTreeIndex = Math.floor(Math.random() * pokemonTrees.length);
+        } else {
+            chosenTreeIndex = parseInt(typeInput.value);
+        }
+
+        const newId = 'id_' + Date.now().toString();
+        const newStudent = {
+            id: newId,
+            name: name,
+            className: className,
+            groupName: groupName, // 新增的組別/座號欄位
+            score: 0,
+            treeIndex: chosenTreeIndex,
+            cpBonus: 0,
+            skills: [] 
+        };
+
+        // 寫入雲端
+        const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'students', newId);
+        await setDoc(docRef, newStudent);
+        
+        // 幫助老師：如果是同一個班級，不清空班級輸入框，只清空名字和組別
+        nameInput.value = "";
+        groupInput.value = "";
+        groupInput.focus();
+        
+        // 自動將過濾器切換到剛剛新增的班級 (或維持顯示全部)
+        if(currentFilter !== 'all' && currentFilter !== className) {
+            document.getElementById('classFilter').value = className;
+            currentFilter = className;
+        }
+
+        showToast("✅ 成功領養精靈球並同步至雲端！");
+    };
+
+    window.updateScore = async function(id, change, isManualInput = false) {
+        if (!currentUser) return;
+        const student = students.find(s => s.id === id);
+        if (student) {
+            let previousStage = getEvolutionStatus(student).stage;
+            let actualChange = change;
+            
+            if (isManualInput) {
+                const inputElement = document.getElementById(`input-${id}`);
+                if (inputElement) {
+                    const inputVal = parseInt(inputElement.value);
+                    if (!isNaN(inputVal) && inputVal > 0) {
+                        actualChange = inputVal * change;
+                    }
+                }
+            }
+            
+            let newScore = student.score + actualChange;
+            if (newScore < 0) newScore = 0;
+            
+            // 預測狀態改變
+            student.score = newScore;
+            let currentStage = getEvolutionStatus(student).stage;
+            if (currentStage > previousStage && actualChange > 0) {
+                if (currentStage === 3) showToast("👑 太神啦！完成最終進化，戰鬥力系統解鎖！");
+                else showToast("✨ 恭喜！寶可夢進化了！");
+            }
+
+            // 寫入雲端
+            const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'students', id);
+            await setDoc(docRef, { score: newScore }, { merge: true });
+        }
+    };
+
+    window.requestDelete = function(id) {
+        if (!currentUser) return;
+        
+        // 呼叫自訂的確認視窗
+        window.openCustomConfirm(
+            "⚠️ 刪除確認", 
+            "確定要將這隻寶可夢移出名單嗎？此動作無法復原。", 
+            async () => {
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'students', id);
+                    await deleteDoc(docRef);
+                    showToast("🗑️ 已移除紀錄");
+                } catch(e) {
+                    console.error("刪除錯誤", e);
+                    showToast("❌ 刪除失敗");
+                }
+            }
+        );
+    };
+
+    window.requestResetAll = function() {
+        if (!currentUser) return;
+
+        window.openCustomConfirm(
+            "⚠️ 清空資料確認", 
+            "警告：將清除雲端所有名單與寶可夢資料！確定要重置嗎？", 
+            async () => {
+                for (const student of students) {
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'students', student.id);
+                    await deleteDoc(docRef);
+                }
+                showToast("🗑️ 已清空所有資料");
+            }
+        );
+    };
+
+    // ========== 戰鬥系統 ==========
+    function getEligibleFighters() {
+        // 戰鬥場可以選擇「所有」達標的寶可夢，不受當前班級篩選限制
+        return students.filter(s => s.score >= THRESHOLD_3);
+    }
+
+    window.openArena = function() {
+        const fighters = getEligibleFighters();
+        if (fighters.length < 2) {
+            showToast("⚠️ 戰鬥場至少需要 2 隻達到 100 分以上的最終進化寶可夢才能開啟喔！");
+            return;
+        }
+
+        updateArenaFightersUI();
+
+        document.getElementById('arenaModal').style.display = 'flex';
+        document.getElementById('battleResult').innerText = "準備就緒，請選擇出戰寶可夢！";
+        document.getElementById('battleResult').style.color = "var(--accent-color)";
+        document.getElementById('btnStartBattle').disabled = false;
+        
+        window.updateFighterImage(1);
+        window.updateFighterImage(2);
+    };
+
+    function updateArenaFightersUI() {
+        const fighters = getEligibleFighters();
+        const f1Select = document.getElementById('fighter1');
+        const f2Select = document.getElementById('fighter2');
+        
+        // 保存當前選擇
+        const currentF1 = f1Select.value;
+        const currentF2 = f2Select.value;
+        
+        f1Select.innerHTML = '';
+        f2Select.innerHTML = '';
+
+        fighters.forEach((f) => {
+            // 在戰鬥場的選項中加入班級資訊，方便跨班對戰時辨識
+            const classInfo = f.className ? `[${f.className}] ` : '';
+            const optionHTML = `<option value="${f.id}">${classInfo}${f.name} (分數:${f.score})</option>`;
+            f1Select.innerHTML += optionHTML;
+            f2Select.innerHTML += optionHTML;
+        });
+
+        // 恢復選擇 (如果還存在)
+        if (currentF1 && fighters.find(f=>f.id===currentF1)) f1Select.value = currentF1;
+        if (currentF2 && fighters.find(f=>f.id===currentF2)) {
+            f2Select.value = currentF2;
+        } else {
+            f2Select.selectedIndex = Math.min(1, fighters.length - 1);
+        }
+    }
+
+    window.closeArena = function() {
+        document.getElementById('arenaModal').style.display = 'none';
+    };
+
+    window.updateFighterImage = function(slotNum) {
+        const selectBox = document.getElementById(`fighter${slotNum}`);
+        const selectedId = selectBox.value;
+        const student = students.find(s => s.id === selectedId);
+        if (student) {
+            const status = getEvolutionStatus(student);
+            document.getElementById(`fighter${slotNum}Img`).innerHTML = status.imageHtml;
+            document.getElementById(`fighter${slotNum}CP`).innerHTML = `分數: ${student.score} 🍎`;
+        }
+    };
+
+    function awardSpecificSkill(winner) {
+        let currentSkills = winner.skills || [];
+        const possibleSkills = SKILL_MAP[winner.treeIndex] || ["💥 撞擊"];
+        const availableSkills = possibleSkills.filter(s => !currentSkills.includes(s));
+        
+        if (availableSkills.length > 0) {
+            const newSkill = availableSkills[Math.floor(Math.random() * availableSkills.length)];
+            return newSkill;
+        }
+        return null; 
+    }
+
+    window.startBattle = async function() {
+        if (!currentUser) return;
+        const id1 = document.getElementById('fighter1').value;
+        const id2 = document.getElementById('fighter2').value;
+
+        if (id1 === id2) {
+            document.getElementById('battleResult').innerText = "⚠️ 不能自己跟自己對戰啦！請選擇不同的對手。";
+            document.getElementById('battleResult').style.color = "var(--danger-color)";
+            return;
+        }
+
+        const p1 = students.find(s => s.id === id1);
+        const p2 = students.find(s => s.id === id2);
+        
+        const status1 = getEvolutionStatus(p1);
+        const status2 = getEvolutionStatus(p2);
+
+        const resultBox = document.getElementById('battleResult');
+        const btn = document.getElementById('btnStartBattle');
+        
+        btn.disabled = true;
+        resultBox.style.color = "white";
+        resultBox.innerText = "⚔️ 戰鬥中... 砰！砰！啪！...";
+
+        setTimeout(async () => {
+            let winner = null;
+            let loser = null;
+            let winnerStatus = null;
+            let battleMessage = "";
+
+            const scoreDiff = Math.abs(p1.score - p2.score);
+
+            if (scoreDiff > 50) {
+                if (p1.score > p2.score) {
+                    winner = p1; loser = p2; winnerStatus = status1;
+                } else {
+                    winner = p2; loser = p1; winnerStatus = status2;
+                }
+                battleMessage = `憑藉著絕對的優勢，取得了壓倒性的勝利！`;
+            } else {
+                if (Math.random() > 0.5) {
+                    winner = p1; loser = p2; winnerStatus = status1;
+                } else {
+                    winner = p2; loser = p1; winnerStatus = status2;
+                }
+                battleMessage = `在激烈的對戰後，幸運女神眷顧險勝一籌！`;
+            }
+
+            if (winner) {
+                const learnedSkill = awardSpecificSkill(winner);
+                let skillMsg = `👑 已經精通所有專屬技能，是名副其實的戰神！`;
+                
+                if (learnedSkill) {
+                    // 更新雲端資料 (增加新技能)
+                    const updatedSkills = [...(winner.skills || []), learnedSkill];
+                    const docRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'students', winner.id);
+                    await setDoc(docRef, { skills: updatedSkills }, { merge: true });
+                    
+                    skillMsg = `🎉 學會了專屬新絕招：<br><span style="color:#FF9800; font-size:1.2em; font-weight:900;">【 ${learnedSkill} 】</span>`;
+                }
+
+                resultBox.innerHTML = `
+                    🏆 <b>${winner.name} (${winnerStatus.name})</b> 獲勝！<br>
+                    <span style="font-size:0.7em; color:#BDBDBD;">💬 ${battleMessage}</span><br>
+                    <span style="font-size:0.9em; color:var(--success-color);">${skillMsg}</span>
+                `;
+            } 
+            
+            window.updateFighterImage(1); 
+            window.updateFighterImage(2);
+            btn.disabled = false;
+        }, 1500); 
+    };
+
+</script>
+
+</body>
+</html>
